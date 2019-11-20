@@ -28,7 +28,7 @@ object S3Support extends StrictLogging {
     if (!bucketExist) {
       logger.debug("bucket does not exist")
       val created: Bucket = s3Client.createBucket(bucket)
-      logger.info("bucket created: ${created.toString}")
+      logger.info(s"bucket created: ${created.toString}")
     } else {
       logger.info(s"bucket $bucket already exists")
     }

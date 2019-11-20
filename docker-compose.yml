@@ -92,6 +92,8 @@ services:
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
     command:
       - bash
