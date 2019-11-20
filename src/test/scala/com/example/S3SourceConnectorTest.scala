@@ -35,7 +35,7 @@ class S3SourceConnectorTest extends FreeSpec
   val connectUri: Uri = uri"http://localhost:8083"
   val bootstrapServers = "localhost:9091"
   val testTopicName = "s3TestTopic"
-  val connectorName = "s3SourceTestConnector"
+  val connectorName = "s3SourceConnector"
   val bucketName = "connectortestbucket"
 
   val connector = S3SourceConnector(name = connectorName, topic = testTopicName, bucket = bucketName, connectUri)

@@ -43,13 +43,12 @@ class S3SinkConnectorTest extends FreeSpec
   val connectUri: Uri = uri"http://localhost:8083"
   val bootstrapServers = "localhost:9091"
   val testTopicName = "s3TestTopic"
-  val connectorName = "s3SinkTestConnector"
+  val connectorName = "s3SinkConnector"
   val bucketName = "connectortestbucket"
 
   val connector = S3SinkConnector(name = connectorName, topic = testTopicName, bucket = bucketName, connectUri)
 
   val adminProps = new Properties()
-
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
   val adminClient: AdminClient = AdminClient.create(adminProps)
 

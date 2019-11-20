@@ -18,6 +18,8 @@ case object S3SourceConnector {
       "s3.bucket.name" -> bucket,
       "s3.region" -> "us-east-1",
 
+      "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
+      "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
       "format.class" -> "io.confluent.connect.s3.format.bytearray.ByteArrayFormat",
 
       "partitioner.class" -> "io.confluent.connect.storage.partitioner.DefaultPartitioner",
