@@ -85,7 +85,7 @@ services:
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect-01"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "connect1"
       CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
       CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
@@ -100,8 +100,8 @@ services:
       - -c
       - |
         echo "Installing Connector"
-        confluent-hub install confluentinc/kafka-connect-s3:5.3.1
-        confluent-hub install confluentinc/kafka-connect-s3-source:1.0.1
+        confluent-hub install confluentinc/kafka-connect-s3:5.3.1 --no-prompt
+        confluent-hub install confluentinc/kafka-connect-s3-source:1.0.1 --no-prompt
         # confluent-hub install --no-prompt debezium/debezium-connector-mysql:0.9.4
         #
         echo "Launching Kafka Connect worker"

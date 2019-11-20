@@ -6,41 +6,7 @@ import sttp.model.Uri
 import io.circe._
 import io.circe.generic.auto._
 
-case class S3SinkConnector(name: String, configMap: Map[String, String], connectUri: Uri, storeUrl: String, maxTasks: Int) extends StrictLogging {
-
-  import sttp.client._
-  import sttp.client.circe._
-
-  import monix.execution.Scheduler.Implicits.global
-  import monix.eval._
-  import monix.reactive._
-  implicit val sttpBackend = AsyncHttpClientMonixBackend().runSyncUnsafe()
-
-  val connectorDef = ConnectorConfig(name, configMap)
-
-  val connectorsUri = connectUri.path("connectors")
-  val connectorUri: Uri = connectUri.path("connectors", name)
-  val tasksUri = connectUri.path("connectors", name, "tasks")
-
-  def createConnector = {
-    basicRequest.body(connectorDef).post(connectorsUri).send()
-  }
-
-  def deleteConnector = {
-    basicRequest.body(connectorDef).delete(connectorUri).send()
-  }
-
-  def getConnectorInfo = {
-    basicRequest.get(connectorUri).send()
-  }
-
-  def getTaskInfo = {
-    basicRequest.get(tasksUri).send()
-  }
-
-  def getTaskState = {
-
-  }
+case class S3SinkConnector(name: String, configMap: Map[String, String], connectUri: Uri, storeUrl: String, maxTasks: Int) extends S3Connector(name, configMap, connectUri, storeUrl, maxTasks) {
 
 }
 
