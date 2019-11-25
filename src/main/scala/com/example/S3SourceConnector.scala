@@ -7,7 +7,7 @@ case class S3SourceConnector(name: String, configMap: Map[String, String], conne
 }
 
 case object S3SourceConnector {
-  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2): S3SinkConnector = {
+  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2): S3SourceConnector = {
 
     val connectorConfigMap: Map[String, String] = Map(
       "name" -> name,
@@ -20,7 +20,11 @@ case object S3SourceConnector {
 
       "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
       "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
+      "value.converter.schemas.enable" -> "false",
+      "key.converter.schemas.enable" -> "false",
+      //"format.class" -> "io.confluent.connect.s3.format.json.JsonFormat",
       "format.class" -> "io.confluent.connect.s3.format.bytearray.ByteArrayFormat",
+      "schemas.enable" -> "false",
 
       "partitioner.class" -> "io.confluent.connect.storage.partitioner.DefaultPartitioner",
       "path.format" -> "'date'=YYYY-MM-dd/'hour'=HH",
@@ -29,7 +33,7 @@ case object S3SourceConnector {
       "confluent.topic.replication.factor" -> "1",
     )
 
-    S3SinkConnector(name, connectorConfigMap, connectUri, storeUrl, maxTasks)
+    S3SourceConnector(name, connectorConfigMap, connectUri, storeUrl, maxTasks)
   }
 }
 

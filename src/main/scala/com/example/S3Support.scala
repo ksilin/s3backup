@@ -4,9 +4,11 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.model.{Bucket, PutObjectResult}
+import com.amazonaws.services.s3.model.{Bucket, DeleteObjectsRequest, ListObjectsV2Result, PutObjectResult}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.jdk.javaapi.CollectionConverters.asScala
 
 object S3Support extends StrictLogging {
 
@@ -49,6 +51,20 @@ object S3Support extends StrictLogging {
     logger.info(res.getETag)
     logger.info(res.getExpirationTime.toString)
     logger.info(res.getVersionId)
+  }
+
+  val deleteAllObjectsInBucket: (AmazonS3, String)  =>  Unit = (s3Client, bucketName)  => {
+
+    var objectsLeft = true
+    while (objectsLeft) {
+      val listObjects: ListObjectsV2Result = s3Client.listObjectsV2(bucketName)
+      val objectKeys: List[String] = asScala(listObjects.getObjectSummaries).map(_.getKey).toList
+      val objectsDeleted = s3Client.deleteObjects(new DeleteObjectsRequest(bucketName).withKeys(objectKeys: _*))
+      // println("deleted objects: ")
+      // asScala(objectsDeleted.getDeletedObjects) foreach (d => println(d.getKey))
+      objectsLeft = objectKeys.nonEmpty
+    }
+    Thread.sleep(1000)
   }
 
 }

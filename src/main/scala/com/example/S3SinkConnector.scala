@@ -20,12 +20,17 @@ case object S3SinkConnector {
 
       "topics" -> topic,
 
+      //"key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
+      //"value.converter" -> "org.apache.kafka.connect.storage.StringConverter",
       "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
       "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
-      "format.class" -> "io.confluent.connect.s3.format.bytearray.ByteArrayFormat",
+      "format.class" -> "io.confluent.connect.s3.format.json.JsonFormat",
+      // JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields
+      "value.converter.schemas.enable" -> "false",
+      "schemas.enable" -> "false", // isnt it the default already?
+      // s3.compression.type -> gzip
 
       "flush.size" -> "3", // 1 bin file per 3 records
-      "rotate.interval.ms" -> "600", // TODO - file/object rotation in bucket? is there a rotate size?
 
       "schema.generator.class" -> "io.confluent.connect.storage.hive.schema.DefaultSchemaGenerator",
       "schema.compatibility" -> "NONE",
