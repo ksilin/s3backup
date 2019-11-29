@@ -26,7 +26,7 @@ class BackupRestoreTest extends FreeSpec
   with MustMatchers
   with LazyLogging
   with FutureConverter
-  with ScalaFutures with BeforeAndAfterAll with Timed {
+  with ScalaFutures with BeforeAndAfterAll with Timed{
 
   import S3Support._
   import sttp.client._
@@ -51,7 +51,9 @@ class BackupRestoreTest extends FreeSpec
   val pollDuration = java.time.Duration.ofMillis(100)
 
   val records: List[ProducerRecord[String, String]] = (1 to 100).toList map { i =>
-    new ProducerRecord[String, String](topicName, 0, i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}")
+    val r = new ProducerRecord[String, String](topicName, 0, i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}")
+    // r.si
+    r
   }
 
   val adminProps = new Properties()
@@ -67,20 +69,6 @@ class BackupRestoreTest extends FreeSpec
   val sourceConnectorName = s"s3SourceConnector-${Random.alphanumeric.take(10).mkString}"
   val sourceConnector = S3SourceConnector(sourceConnectorName, topicName, bucketName, connectUri: Uri, storeUrl = "http://minio1:9000", 1)
 
-  def deleteAllObjectsInBucket(s3Client: AmazonS3, bucketName: String) = {
-
-    var objectsLeft = true
-    while (objectsLeft) {
-      val listObjects: ListObjectsV2Result = s3Client.listObjectsV2(bucketName)
-      val objectKeys: List[String] = asScala(listObjects.getObjectSummaries).map(_.getKey).toList
-      val objectsDeleted = s3Client.deleteObjects(new DeleteObjectsRequest(bucketName).withKeys(objectKeys: _*))
-      // println("deleted objects: ")
-      // asScala(objectsDeleted.getDeletedObjects) foreach (d => println(d.getKey))
-      objectsLeft = objectKeys.nonEmpty
-    }
-    Thread.sleep(1000)
-  }
-
   override def beforeAll() {
 
     // create topic if not exists
@@ -93,14 +81,15 @@ class BackupRestoreTest extends FreeSpec
       Future.sequence(createTopicResults.values.map(f => toScalaFuture(f)))
     }
     Await.result(createTopicIfNotExists, 10.seconds)
-    waitForTopicToExist(adminClient, topicName)
+    AdminHelper.waitForTopicToExist(adminClient, topicName)
     Thread.sleep(1000)
     // clear topic
-    truncateTopic(adminClient, topicName, 1)
+    AdminHelper.truncateTopic(adminClient, topicName, 1)
     // clear connect offsets
-    truncateTopic(adminClient, "_connect-offsets", 25)
-    truncateTopic(adminClient, "_connect-status", 25)
-    truncateTopic(adminClient, "__consumer_offsets", 50)
+    // TODO - does not seem to influence the last file the Source connector read
+    AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
+    AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
+    AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50)
 
     // delete connectors
     sinkConnector.deleteConnector.runSyncUnsafe()
@@ -110,8 +99,7 @@ class BackupRestoreTest extends FreeSpec
     deleteAllObjectsInBucket(s3Client, bucketName)
   }
 
-  // TODO - afterAll, clearing all involved connectors
-  override def afterAll() = {
+  override def afterAll() {
     sinkConnector.deleteConnector.runSyncUnsafe()
     sourceConnector.deleteConnector.runSyncUnsafe()
   }
@@ -167,7 +155,7 @@ class BackupRestoreTest extends FreeSpec
     // wait for connector to be deleted
     Thread.sleep(5000)
     println("recreating topic")
-    truncateTopic(adminClient, topicName, 1)
+    AdminHelper.truncateTopic(adminClient, topicName, 1)
 
     // create source
     println("creating source connector")
@@ -227,46 +215,4 @@ class BackupRestoreTest extends FreeSpec
       logger.error(s"failed to publish to kafka: $e")
   }
 
-  val truncateTopic = (adminClient: AdminClient, topic: String, partitions: Int) => {
-
-    val javaTopicSet = asJava(Set(topicName))
-
-    val deleted = Await.result(toScalaFuture(adminClient.deleteTopics(javaTopicSet).all()), 10.seconds)
-    waitForTopicToBeDeleted(adminClient, topic)
-    Thread.sleep(2000)
-    val created = Await.result(toScalaFuture(adminClient.createTopics(asJava(Set(new NewTopic(topicName, partitions, 1)))).all()), 10.seconds)
-    waitForTopicToExist(adminClient, topic)
-    Thread.sleep(2000)
-  }
-
-  val waitForTopicToExist = (adminClient: AdminClient, topic: String) => {
-    val javaTopicSet = asJava(Set(topicName))
-    var topicExists = false
-    while (!topicExists) {
-      val names = Await.result(toScalaFuture(adminClient.listTopics().names()), 10.seconds)
-      // println("existing topics: ")
-      // asScala(names) foreach println
-      topicExists = names.contains(topicName)
-    }
-  }
-
-  val waitForTopicToBeDeleted = (adminClient: AdminClient, topic: String) => {
-    val javaTopicSet = asJava(Set(topicName))
-    var topicExists = true
-    while (topicExists) {
-      val names = Await.result(toScalaFuture(adminClient.listTopics().names()), 10.seconds)
-      // println("existing topics: ")
-      // asScala(names) foreach println
-      topicExists = names.contains(topicName)
-    }
-  }
-
-  val truncateTopic2 = { (adminClient: AdminClient, topic: String, partitions: Int) =>
-
-    val deleteAllOffset = RecordsToDelete.beforeOffset(10000)
-    val topicPartitions = (0 until partitions) map (i => new TopicPartition(topic, i))
-    val topicPartitionMap = topicPartitions.map(tp => (tp, deleteAllOffset)).toMap
-    val truncateTopic: DeleteRecordsResult = adminClient.deleteRecords(asJava(topicPartitionMap))
-    Await.result(toScalaFuture(truncateTopic.all()), 10.seconds)
-  }
 }

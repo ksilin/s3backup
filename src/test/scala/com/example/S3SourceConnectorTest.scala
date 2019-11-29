@@ -34,16 +34,24 @@ class S3SourceConnectorTest extends FreeSpec
 
   val connectUri: Uri = uri"http://localhost:8083"
   val bootstrapServers = "localhost:9091"
-  val testTopicName = "s3TestTopic"
+  val testTopicName = "s3TestTopicAvro"
   val connectorName = "s3SourceConnector"
   val bucketName = "connectortestbucket"
 
-  val connector = S3SourceConnector(name = connectorName, topic = testTopicName, bucket = bucketName, connectUri)
+  val connector: S3SourceConnector = S3SourceConnector(name = connectorName, topic = testTopicName, bucket = bucketName, connectUri)
 
   val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
   val s3Client = createClient(minioConfig)
 
+  val adminProps = new Properties()
+  adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
+  val adminClient: AdminClient = AdminClient.create(adminProps)
+
   override def beforeAll() {
+    AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
+    AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
+    AdminHelper.truncateTopic(adminClient, testTopicName, 1)
+    //AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) // TODO - consumer offsets cannot be recreated?
     createBucketIfNotExists(s3Client, bucketName)
   }
 
@@ -73,7 +81,7 @@ class S3SourceConnectorTest extends FreeSpec
 
   }
 
-  "delete connector" in {
+  "delete source connector" in {
     val delete = connector.deleteConnector.runSyncUnsafe()
     delete.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
   }

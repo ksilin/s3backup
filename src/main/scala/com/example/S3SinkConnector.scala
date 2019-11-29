@@ -11,7 +11,7 @@ case class S3SinkConnector(name: String, configMap: Map[String, String], connect
 }
 
 case object S3SinkConnector {
-  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2): S3SinkConnector = {
+  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2, configOverride: Map[String, String] = Map.empty): S3SinkConnector = {
 
     val connectorConfigMap: Map[String, String] = Map(
       "name" -> name,
@@ -20,14 +20,17 @@ case object S3SinkConnector {
 
       "topics" -> topic,
 
-      //"key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
-      //"value.converter" -> "org.apache.kafka.connect.storage.StringConverter",
-      "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
-      "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
-      "format.class" -> "io.confluent.connect.s3.format.json.JsonFormat",
+      "key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
+      // "value.converter" -> "org.apache.kafka.connect.json.JsonConverter",
+      // "format.class" -> "io.confluent.connect.s3.format.json.JsonFormat",
+
+      "value.converter" -> "io.confluent.connect.avro.AvroConverter",
+      "value.converter.schema.registry.url" -> "http://schema-registry:8081",
+      "format.class" -> "io.confluent.connect.s3.format.avro.AvroFormat",
+
       // JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields
-      "value.converter.schemas.enable" -> "false",
-      "schemas.enable" -> "false", // isnt it the default already?
+      // "value.converter.schemas.enable" -> "false",
+      // "schemas.enable" -> "true", // isnt it the default already?
       // s3.compression.type -> gzip
 
       "flush.size" -> "3", // 1 bin file per 3 records
@@ -46,7 +49,7 @@ case object S3SinkConnector {
       "path.format" -> "'date'=YYYY-MM-dd/'hour'=HH",
       "locale" -> "en",
       "timezone" -> "UTC",
-      "timestamp.extractor" -> "Record")
+      "timestamp.extractor" -> "Record") ++ configOverride
 
     S3SinkConnector(name, connectorConfigMap, connectUri, storeUrl, maxTasks)
   }

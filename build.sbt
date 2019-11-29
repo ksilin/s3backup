@@ -9,7 +9,16 @@ lazy val root = (project in file(".")).
 enablePlugins(DockerComposePlugin)
 enablePlugins(DockerPlugin)
 
+resolvers += Resolver.bintrayRepo("ovotech", "maven")
+resolvers += "confluent" at "https://packages.confluent.io/maven/"
+
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.3.1"
+libraryDependencies += "io.confluent" % "kafka-streams-avro-serde" % "5.3.1"
+libraryDependencies += "io.confluent" % "kafka-avro-serializer" % "5.3.1"
+
+libraryDependencies += "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4"
+
+
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 libraryDependencies += "io.minio" % "minio" % "6.0.11"
@@ -28,5 +37,8 @@ libraryDependencies += "com.softwaremill.sttp.client" %% "core" % "2.0.0-RC1"
 libraryDependencies += "com.softwaremill.sttp.client" %% "async-http-client-backend-monix" % "2.0.0-RC1"
 libraryDependencies += "com.softwaremill.sttp.client" %% "circe" % "2.0.0-RC1"
 libraryDependencies += "io.circe" %% "circe-generic" % "0.12.1"
+
+// libraryDependencies += "com.ovoenergy" %% "kafka-serialization-core" % "0.5.17"
+// libraryDependencies += "com.ovoenergy" %% "kafka-serialization-circe" % "0.5.17"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test

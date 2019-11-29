@@ -16,6 +16,14 @@ reading stored data from S3
 
 https://www.confluent.io/hub/confluentinc/kafka-connect-s3-source
 
+## tips
+
+HTTPie is a great tool: 
+
+* list connectors : `http :8083/connectors`
+
+* delete connector: `http DELETE :8083/connectors/s3SinkConnector`
+
 ## run tests
 
 `> sbt dockerComposeTest`

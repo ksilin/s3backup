@@ -5,6 +5,7 @@ import org.apache.kafka.clients.admin.{AdminClient, NewTopic}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.jdk.javaapi.CollectionConverters.asJava
+import scala.util.Try
 
 
 case object AdminHelper extends FutureConverter {
@@ -13,11 +14,12 @@ case object AdminHelper extends FutureConverter {
   val truncateTopic = (adminClient: AdminClient, topic: String, partitions: Int) => {
 
     val javaTopicSet = asJava(Set(topic))
-
-    val deleted = Await.result(toScalaFuture(adminClient.deleteTopics(javaTopicSet).all()), 10.seconds)
+    println(s"deleting topic $topic")
+    val deleted: Try[Void] = Try { Await.result(toScalaFuture(adminClient.deleteTopics(javaTopicSet).all()), 10.seconds) }
     waitForTopicToBeDeleted(adminClient, topic)
     Thread.sleep(2000)
-    val created = Await.result(toScalaFuture(adminClient.createTopics(asJava(Set(new NewTopic(topic, partitions, 1)))).all()), 10.seconds)
+    println(s"creaing topic $topic")
+    val created: Try[Void] = Try { Await.result(toScalaFuture(adminClient.createTopics(asJava(Set(new NewTopic(topic, partitions, 1)))).all()), 10.seconds) }
     waitForTopicToExist(adminClient, topic)
     Thread.sleep(2000)
   }

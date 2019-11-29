@@ -1,9 +1,10 @@
 package com.example
 
+import java.nio.charset.StandardCharsets
 import java.util
 import java.util.Properties
 
-import com.example.S3Support.{createBucketIfNotExists, createClient}
+import com.example.S3Support.{createBucketIfNotExists, createClient, deleteAllObjectsInBucket}
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.reactive.Observable
@@ -14,9 +15,15 @@ import sttp.model.Uri
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.common.KafkaFuture
 import io.circe._
+import io.circe.syntax._
 import io.circe.generic.auto._
 import org.apache.kafka.clients.producer.{Callback, KafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata}
-import org.apache.kafka.common.serialization.Serdes
+import org.apache.kafka.common.serialization.{Deserializer, Serde, Serdes, Serializer}
+import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
+import io.confluent.kafka.schemaregistry.client.{CachedSchemaRegistryClient, SchemaMetadata, SchemaRegistryClient}
+import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde
+import org.apache.avro.Schema
+import org.apache.avro.generic.GenericRecord
 
 import scala.collection.mutable
 import scala.jdk.javaapi.CollectionConverters._
@@ -29,7 +36,7 @@ class S3SinkConnectorTest extends FreeSpec
   with MustMatchers
   with LazyLogging
   with FutureConverter
-  with ScalaFutures with BeforeAndAfterAll with Timed {
+  with ScalaFutures with BeforeAndAfterAll with Timed with ImplicitCirceSerde with GenericRecordAvro {
 
   import sttp.client._
   import sttp.client.circe._
@@ -42,7 +49,8 @@ class S3SinkConnectorTest extends FreeSpec
 
   val connectUri: Uri = uri"http://localhost:8083"
   val bootstrapServers = "localhost:9091"
-  val testTopicName = "s3TestTopic"
+  //val testTopicName = "s3TestTopicBytes"
+  val testTopicName = "s3TestTopicAvro"
   val connectorName = "s3SinkConnector"
   val bucketName = "connectortestbucket"
 
@@ -55,14 +63,42 @@ class S3SinkConnectorTest extends FreeSpec
   val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
   val s3Client = createClient(minioConfig)
 
-  val records: List[ProducerRecord[String, String]] = (1 to 100).toList map { i =>
-    new ProducerRecord[String, String](testTopicName, 0, i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}")
+  // val records: List[ProducerRecord[String, String]] = (1 to 100).toList map { i =>
+  // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8)).asJson.noSpaces
+   // new ProducerRecord[String, String](testTopicName, 0, i.toString, msg)//s"$i + ${Random.alphanumeric.take(10).mkString}")
+  // }
+
+  val schema = AvroSchema[SimpleMessage]
+  implicit val format: RecordFormat[SimpleMessage] = RecordFormat(schema)
+  // val record: GenericRecord            = toAvro(data)(fmt)
+  val fmt: RecordFormat[SimpleMessage] = implicitly[RecordFormat[SimpleMessage]]
+  val srClient         = new CachedSchemaRegistryClient("http://localhost:8081", 50)
+
+  srClient.register(s"$testTopicName-value", schema)
+
+  val avroSerde: GenericAvroSerde = new GenericAvroSerde(srClient)
+
+
+  val records: List[ProducerRecord[String, GenericRecord]] = (1 to 100).toList map { i =>
+    val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))
+    // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))//.asJson.noSpaces
+    new ProducerRecord[String, GenericRecord](testTopicName, 0, i.toString, toAvro(msg))//s"$i + ${Random.alphanumeric.take(10).mkString}")
   }
 
-  val stringSerdes = Serdes.String()
-  val producer = makeProducer
+//  val serializer: Serializer[Foo] = implicitly
+//  val deserializer: Deserializer[Foo] = implicitly
+//  val serde: Serde[Foo] = implicitly
+
+
+  val producer = makeAvroProducer//makeStringProducer
 
   override def beforeAll() {
+
+    //truncate offsets
+    AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
+    AdminHelper.truncateTopic(adminClient, testTopicName, 1)
+    // AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
+    // AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50)
 
     // create topic if not exists
     val getTopicNames: Future[util.Set[String]] = toScalaFuture(adminClient.listTopics().names())
@@ -77,13 +113,13 @@ class S3SinkConnectorTest extends FreeSpec
 
     // produce records
     val x: Future[List[RecordMetadata]] = Future.traverse(records.toList) {
-      r: ProducerRecord[String, String] =>
+      r =>
         toScalaFuture(producer.send(r, loggingProducerCallback))
     }
     val metadata: List[RecordMetadata] = Await.result(x, 10.seconds)
     createBucketIfNotExists(s3Client, bucketName)
+    deleteAllObjectsInBucket(s3Client, bucketName)
   }
-
 
 
   "get connectors" in {
@@ -118,20 +154,31 @@ class S3SinkConnectorTest extends FreeSpec
 
   }
 
-  "delete connector" in {
+  "delete sink connector" in {
     val delete = connector.deleteConnector.runSyncUnsafe()
     delete.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
   }
 
 
-
-  private def makeProducer = {
+  private def makeStringProducer = {
+    val stringSerdes = Serdes.String()
     val producerJavaProps = new java.util.Properties
     producerJavaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
     new KafkaProducer[String, String](producerJavaProps,
       stringSerdes.serializer(),
       stringSerdes.serializer())
   }
+
+  private def makeAvroProducer = {
+    val stringSerdes = Serdes.String()
+
+    val producerJavaProps = new java.util.Properties
+    producerJavaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
+    new KafkaProducer[String, GenericRecord](producerJavaProps,
+      stringSerdes.serializer(),
+      avroSerde.serializer())
+  }
+
 
   val loggingProducerCallback = new Callback {
     override def onCompletion(meta: RecordMetadata, e: Exception): Unit =
