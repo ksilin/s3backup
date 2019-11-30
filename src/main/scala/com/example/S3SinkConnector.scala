@@ -28,15 +28,34 @@ case object S3SinkConnector {
       "value.converter.schema.registry.url" -> "http://schema-registry:8081",
       "format.class" -> "io.confluent.connect.s3.format.avro.AvroFormat",
 
+      // compression
+      "avro.codec" -> "snappy",
+
+      //  to enable enum symbol preservation and package name awareness
+      "enhanced.avro.schema.support" -> "true",
+
+
       // JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields
       // "value.converter.schemas.enable" -> "false",
       // "schemas.enable" -> "true", // isnt it the default already?
       // s3.compression.type -> gzip
 
+      // file rotation
       "flush.size" -> "3", // 1 bin file per 3 records
 
       "schema.generator.class" -> "io.confluent.connect.storage.hive.schema.DefaultSchemaGenerator",
       "schema.compatibility" -> "NONE",
+
+      "transforms" -> "addOffset,addPartition,addTimestamp",
+
+      "transforms.addOffset.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addOffset.offset.field"-> "offset",
+
+      "transforms.addPartition.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addPartition.partition.field"-> "partition",
+
+      "transforms.addTimestamp.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addTimestamp.timestamp.field"-> "ts",
 
       "s3.bucket.name" -> bucket,
       "s3.region" -> "us-east-1",

@@ -16,6 +16,10 @@ reading stored data from S3
 
 https://www.confluent.io/hub/confluentinc/kafka-connect-s3-source
 
+## common configuration 
+
+see https://github.com/confluentinc/kafka-connect-object-store-source/blob/master/cloud-storage-source-common/src/main/java/io/confluent/connect/cloud/storage/source/CloudStorageSourceConnectorCommonConfig.java
+
 ## tips
 
 HTTPie is a great tool: 
@@ -36,24 +40,41 @@ What topics do we need to resume processing with minimal data loss except the da
 consumer offsets -> 
 schemas -> 
 
+You do not need to recover the schema topic for restoring the records as the schema is stored along with the records on S3. However you want to restore the schemas for your applications to work. 
+
 ## SMTs
 
 ### inserting fields with sink
 
 https://docs.confluent.io/current/connect/transforms/insertfield.html#insertfield
 
+`"transforms" -> "addOffset,addPartition,addTimestamp",`
+
 ### record key
 
 The key is not stored along with the record. If your record does not include the key, you might want to include id with an SMT in the sink connector and extract it with the source connector.
 
 
-### offset
+### offset - `offset.field`
 
-`offset.field`
+```
+      "transforms.addOffset.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addOffset.offset.field"-> "offset",
+```
 
-### timestamp
+### partition - `partition.field`
 
-`timestamp.field`
+```
+      "transforms.addPartition.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addPartition.partition.field"-> "partition",
+```
+
+### timestamp - `timestamp.field`
+
+```
+      "transforms.addTimestamp.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addTimestamp.timestamp.field"-> "ts",
+```
 
 ### restoring and removing fields with source
 
@@ -85,6 +106,21 @@ while writing the data back to the brokers, you might want to drop the extra fie
 You will need to recreate the connect machine to flush the offsets
 
 `docker-compose up -d --build --no-deps --force connect1`
+
+## notes
+
+### how big do I want the individual files to be?
+
+you can rotate
+
+Why not a single file per record?
+
+Because each file stores the schema. 
+
+Why would you want to rotate the files at all?
+
+
+
 
 ## TODO
 

@@ -19,13 +19,13 @@ case class TestRecords(topicName: String, bootstrapServers: String = "localhost:
 
   import monix.execution.Scheduler.Implicits.global
 
-  val schema: Schema = AvroSchema[SimpleMessage]
-  implicit val format: RecordFormat[SimpleMessage] = RecordFormat(schema)
-  val fmt: RecordFormat[SimpleMessage] = implicitly[RecordFormat[SimpleMessage]]
+  val simpleMessageSchema: Schema = AvroSchema[SimpleMessage]
+  implicit val simpleMessageFormat: RecordFormat[SimpleMessage] = RecordFormat(simpleMessageSchema)
+  //val fmt: RecordFormat[SimpleMessage] = implicitly[RecordFormat[SimpleMessage]]
   val srClient         = new CachedSchemaRegistryClient(schemaRegistryUri, 50)
 
   val avroSerde: GenericAvroSerde = new GenericAvroSerde(srClient)
-  srClient.register(s"$topicName-value", schema)
+  srClient.register(s"$topicName-value", simpleMessageSchema)
 
   // val records: List[ProducerRecord[String, String]] = (1 to 100).toList map { i =>
   // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8)).asJson.noSpaces
