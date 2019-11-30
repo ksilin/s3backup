@@ -28,7 +28,15 @@ HTTPie is a great tool:
 
 `> sbt dockerComposeTest`
 
-## details
+
+## topics
+
+What topics do we need to resume processing with minimal data loss except the data topic itself?
+
+consumer offsets -> 
+schemas -> 
+
+## SMTs
 
 ### inserting fields with sink
 
@@ -36,13 +44,7 @@ https://docs.confluent.io/current/connect/transforms/insertfield.html#insertfiel
 
 ### record key
 
-The key is not stored along with the record. If your record does not include the key, youmight want to include id with an SMT in the sink connector and extract it with the source connector.
-
-```
-      "transforms" -> "createKey",
-      "transforms.createKey.type" -> "org.apache.kafka.connect.transforms.ValueToKey",
-      "transforms.createKey.fields"-> "key",
-```
+The key is not stored along with the record. If your record does not include the key, you might want to include id with an SMT in the sink connector and extract it with the source connector.
 
 
 ### offset
@@ -53,9 +55,23 @@ The key is not stored along with the record. If your record does not include the
 
 `timestamp.field`
 
-### removing fields with source
+### restoring and removing fields with source
 
-while writing the data back to the brokers, you might want to drop the extra fields we added in the sink. 
+while writing the data back to the brokers, you might want to drop the extra fields we added in the sink.
+
+###  record key - ValueToKey
+
+```
+      "transforms" -> "createKey",
+      "transforms.createKey.type" -> "org.apache.kafka.connect.transforms.ValueToKey",
+      "transforms.createKey.fields"-> "key",
+```
+
+### remove partition field
+
+### remove offset field
+
+### remove timestamp fieild
 
 ## utils
 
@@ -70,7 +86,19 @@ You will need to recreate the connect machine to flush the offsets
 
 `docker-compose up -d --build --no-deps --force connect1`
 
+## TODO
+
+* offset translation for consumer failover
+* exactly once 
+* parallelization & sequentiality
+* repartitioning 
+* retention & timestamps
+* compacted topics
+
 ## caveat
+
+* no way to restrict restored topics with S3 source connector
+
 
 The implementation demonstrates a naive approach. In order to be used in production, more aspects need to be covered, e.g.:
 
