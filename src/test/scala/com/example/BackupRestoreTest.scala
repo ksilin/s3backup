@@ -67,7 +67,7 @@ class BackupRestoreTest extends FreeSpec
   // TODO: does it make sense for the source connector have two workers?
   // TODO - using random suffix since IDK yet, where the offsets are stored
   val sourceConnectorName = s"s3SourceConnector-${Random.alphanumeric.take(10).mkString}"
-  val sourceConnector = S3SourceConnector(sourceConnectorName, topicName, bucketName, connectUri: Uri, storeUrl = "http://minio1:9000", 1)
+  val sourceConnector = S3SourceConnector(sourceConnectorName, bucketName, connectUri: Uri, storeUrl = "http://minio1:9000", 1)
 
   override def beforeAll() {
 

@@ -7,12 +7,14 @@ case class S3SourceConnector(name: String, configMap: Map[String, String], conne
 }
 
 case object S3SourceConnector {
-  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2, configOverride: Map[String, String] = Map.empty): S3SourceConnector = {
+  def apply(name: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2, configOverride: Map[String, String] = Map.empty): S3SourceConnector = {
 
     val connectorConfigMap: Map[String, String] = Map(
       "name" -> name,
+       "topics.dir" -> "topics",
       "connector.class" -> "io.confluent.connect.s3.source.S3SourceConnector",
       "tasks.max" -> maxTasks.toString,
+      "record.batch.max.size" -> "1",
 
       "store.url" -> storeUrl,
       "s3.bucket.name" -> bucket,
@@ -35,6 +37,17 @@ case object S3SourceConnector {
 
       "confluent.topic.bootstrap.servers" -> "kafka1:19091",
       "confluent.topic.replication.factor" -> "1",
+
+      // reroute records
+      // "transforms"  -> "routeRecords",
+      // "transforms.routeRecords.type" ->  "org.apache.kafka.connect.transforms.RegexRouter",
+      // "transforms.routeRecords.regex" -> "(.*)",
+      // "transforms.routeRecords.replacement" -> "$1-test"
+
+      "transforms" -> "createKey",
+      "transforms.createKey.type" -> "org.apache.kafka.connect.transforms.ValueToKey",
+      "transforms.createKey.fields"-> "key",
+
     ) ++ configOverride
 
     S3SourceConnector(name, connectorConfigMap, connectUri, storeUrl, maxTasks)
