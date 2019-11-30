@@ -1,24 +1,14 @@
 package com.example
 
-import java.util
 import java.util.Properties
 
 import com.example.S3Support.{createBucketIfNotExists, createClient}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
-import org.apache.kafka.clients.producer._
-import org.apache.kafka.common.KafkaFuture
-import org.apache.kafka.common.serialization.Serdes
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.model.Uri
-
-import scala.collection.mutable
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.jdk.javaapi.CollectionConverters._
-import scala.util.Random
 
 class S3SourceConnectorTest extends FreeSpec
   with MustMatchers
