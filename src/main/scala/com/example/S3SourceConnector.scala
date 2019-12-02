@@ -32,6 +32,12 @@ case object S3SourceConnector {
       "format.class" -> "io.confluent.connect.s3.format.avro.AvroFormat",
       "schema.registry.url" -> "http://schema-registry:8081",
 
+      // compression
+      "avro.codec" -> "snappy",
+
+      //  to enable enum symbol preservation and package name awareness
+      "enhanced.avro.schema.support" -> "true",
+
       "partitioner.class" -> "io.confluent.connect.storage.partitioner.DefaultPartitioner",
       "path.format" -> "'date'=YYYY-MM-dd/'hour'=HH",
 
@@ -39,10 +45,10 @@ case object S3SourceConnector {
       "confluent.topic.replication.factor" -> "1",
 
       // reroute records
-      // "transforms"  -> "routeRecords",
-      // "transforms.routeRecords.type" ->  "org.apache.kafka.connect.transforms.RegexRouter",
-      // "transforms.routeRecords.regex" -> "(.*)",
-      // "transforms.routeRecords.replacement" -> "$1-test"
+      "transforms"  -> "routeRecords",
+      "transforms.routeRecords.type" ->  "org.apache.kafka.connect.transforms.RegexRouter",
+      "transforms.routeRecords.regex" -> "(.*)",
+      "transforms.routeRecords.replacement" -> "$1-test",
 
       "transforms" -> "createKey",
       "transforms.createKey.type" -> "org.apache.kafka.connect.transforms.ValueToKey",

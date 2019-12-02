@@ -43,11 +43,9 @@ class S3SinkConnectorTest extends FreeSpec
   private val schemaRegistryUri = "http://localhost:8081"
 
   //val testTopicName = "s3TestTopicBytes"
-  val testTopicName = "s3TestTopicAvro"
-  val connectorName = "s3SinkConnector"
-  val bucketName = "connectortestbucket"
+  val testTopicName = "s3TestTopicAvroExt"
 
-  val connector = S3SinkConnector(name = connectorName, topic = testTopicName, bucket = bucketName, connectUri)
+  val bucketName = "connectortestbucket"
 
   val adminProps = new Properties()
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
@@ -97,29 +95,83 @@ class S3SinkConnectorTest extends FreeSpec
     res.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
   }
 
-  "get connector info" in {
-    val info = connector.getConnectorInfo.runSyncUnsafe()
-    info.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
+  "data topic connector" - {
+
+    val connectorName = "s3SinkConnector"
+
+    val smtConfigMap = Map(
+      "transforms" -> "addOffset,addPartition,addTimestamp",
+
+      "transforms.addOffset.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addOffset.offset.field"-> "offset",
+
+      "transforms.addPartition.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addPartition.partition.field"-> "partition",
+
+      "transforms.addTimestamp.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
+      "transforms.addTimestamp.timestamp.field"-> "ts",
+    )
+
+    val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = smtConfigMap)
+
+    "get connector info" in {
+      val info = connector.getConnectorInfo.runSyncUnsafe()
+      info.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
+    }
+
+    "get connector task info" in {
+      val info = connector.getTaskInfo.runSyncUnsafe()
+      info.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
+    }
+
+    "create sink connector" in {
+      val create = connector.createConnector
+      val res: Response[Either[String, String]] = create.runSyncUnsafe()
+      println(res.body fold(e => s"failed: $e", r => s"success: $r"))
+    }
+
+    "change connector config" in {
+
+    }
+
+    "delete sink connector" in {
+      val delete = connector.deleteConnector.runSyncUnsafe()
+      delete.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
+    }
   }
 
-  "get connector task info" in {
-    val info = connector.getTaskInfo.runSyncUnsafe()
-    info.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
-  }
+  "schemas and offsets" - {
 
-  "create sink connector" in {
-    val create = connector.createConnector
-    val res: Response[Either[String, String]] = create.runSyncUnsafe()
-    println(res.body fold(e => s"failed: $e", r => s"success: $r"))
-  }
+    val consumerOffsetsTopic = "__consumer_offsets"
+    val schemaTopic = "_schemas"
+    val topics = List(schemaTopic,consumerOffsetsTopic)
 
-  "change connector config" in {
+    val tombstoneHandlerConfig = Map(
+      "transforms" -> "tombstoneHandler",
+      // ignores the tombstone silently and writes a WARN message to log.
+      "transforms.tombstoneHandler.type" -> "io.confluent.connect.transforms.TombstoneHandler",
+    )
 
-  }
+    val formatOverride = Map(
+      "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
+      "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
+      "format.class" -> "io.confluent.connect.s3.format.bytearray.ByteArrayFormat",
+    )
 
-  "delete sink connector" in {
-    val delete = connector.deleteConnector.runSyncUnsafe()
-    delete.body fold(e => logger.error(s"failed: $e"), r => logger.info(s"success: $r"))
+    val failureHandlingOverride = Map(
+      "errors.tolerance"  -> "all",
+      "errors.log.enable" -> "true",
+      "errors.log.include.messages" -> "true",
+    )
+
+    val connectorName = "s3SinkConnectorAux"
+    val connector = S3SinkConnector(name = connectorName, topics = topics.mkString(","), bucket = bucketName, connectUri, configOverride = formatOverride ++ failureHandlingOverride ++ tombstoneHandlerConfig)
+
+    "create sink connector for schemas and consumer offsets" in {
+      val create = connector.createConnector
+      val res: Response[Either[String, String]] = create.runSyncUnsafe()
+      println(res.body fold(e => s"failed: $e", r => s"success: $r"))
+    }
   }
 
 }

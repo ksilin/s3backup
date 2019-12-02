@@ -11,14 +11,14 @@ case class S3SinkConnector(name: String, configMap: Map[String, String], connect
 }
 
 case object S3SinkConnector {
-  def apply(name: String, topic: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2, configOverride: Map[String, String] = Map.empty): S3SinkConnector = {
+  def apply(name: String, topics: String, bucket: String, connectUri: Uri, storeUrl: String = "http://minio1:9000", maxTasks: Int = 2, configOverride: Map[String, String] = Map.empty): S3SinkConnector = {
 
     val connectorConfigMap: Map[String, String] = Map(
       "name" -> name,
       "connector.class" -> "io.confluent.connect.s3.S3SinkConnector",
       "tasks.max" -> maxTasks.toString,
 
-      "topics" -> topic,
+      "topics" -> topics,
 
       "key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
       // "value.converter" -> "org.apache.kafka.connect.json.JsonConverter",
@@ -34,7 +34,6 @@ case object S3SinkConnector {
       //  to enable enum symbol preservation and package name awareness
       "enhanced.avro.schema.support" -> "true",
 
-
       // JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields
       // "value.converter.schemas.enable" -> "false",
       // "schemas.enable" -> "true", // isnt it the default already?
@@ -46,16 +45,6 @@ case object S3SinkConnector {
       "schema.generator.class" -> "io.confluent.connect.storage.hive.schema.DefaultSchemaGenerator",
       "schema.compatibility" -> "NONE",
 
-      "transforms" -> "addOffset,addPartition,addTimestamp",
-
-      "transforms.addOffset.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
-      "transforms.addOffset.offset.field"-> "offset",
-
-      "transforms.addPartition.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
-      "transforms.addPartition.partition.field"-> "partition",
-
-      "transforms.addTimestamp.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
-      "transforms.addTimestamp.timestamp.field"-> "ts",
 
       "s3.bucket.name" -> bucket,
       "s3.region" -> "us-east-1",
