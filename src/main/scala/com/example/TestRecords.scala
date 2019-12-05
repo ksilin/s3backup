@@ -32,15 +32,15 @@ case class TestRecords(topicName: String, bootstrapServers: String = "localhost:
   // new ProducerRecord[String, String](testTopicName, 0, i.toString, msg)//s"$i + ${Random.alphanumeric.take(10).mkString}")
   // }
 
-  val makeRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => (1 to count).toList map { i =>
+  val makeAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => (1 to count).toList map { i =>
     val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))
     // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))//.asJson.noSpaces
     new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))//s"$i + ${Random.alphanumeric.take(10).mkString}")
   }
 
 
-  val produceRecords: (Int) => List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = (count) => {
-    val records = makeRecords(topicName, count)
+  val produceAvroRecords: (Int) => List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = (count) => {
+    val records = makeAvroRecords(topicName, count)
     val x: Future[List[(ProducerRecord[String, GenericRecord], RecordMetadata)]] = Future.traverse(records) {
       r =>
         toScalaFuture(producer.send(r, loggingProducerCallback)).map((r -> _))
@@ -48,7 +48,7 @@ case class TestRecords(topicName: String, bootstrapServers: String = "localhost:
     Await.result(x, 10.seconds)
   }
 
-  val makeStringProducer = (bootstrapServers: String) => {
+  val makeStringProducer: String => KafkaProducer[String, String] = (bootstrapServers: String) => {
     val stringSerdes = Serdes.String()
     val producerJavaProps = new java.util.Properties
     producerJavaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
@@ -57,7 +57,7 @@ case class TestRecords(topicName: String, bootstrapServers: String = "localhost:
       stringSerdes.serializer())
   }
 
-  val makeAvroProducer = (bootstrapServers: String) => {
+  val makeAvroProducer: String => KafkaProducer[String, GenericRecord] = (bootstrapServers: String) => {
     val stringSerdes = Serdes.String()
 
     val producerJavaProps = new java.util.Properties
@@ -67,7 +67,7 @@ case class TestRecords(topicName: String, bootstrapServers: String = "localhost:
       avroSerde.serializer())
   }
 
-  val producer = makeAvroProducer(bootstrapServers)
+  val producer: KafkaProducer[String, GenericRecord] = makeAvroProducer(bootstrapServers)
 
   val loggingProducerCallback = new Callback {
     override def onCompletion(meta: RecordMetadata, e: Exception): Unit =

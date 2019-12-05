@@ -1,15 +1,16 @@
 package com.example
 
+import com.typesafe.scalalogging.StrictLogging
 import io.minio.MinioClient
 
-object MinioSupport {
+object MinioSupport extends StrictLogging {
 
   val createBucketIfNotExists: (MinioClient, String) => Unit = (client, bucket) => {
     val bucketExist = client.bucketExists(bucket)
     if (!bucketExist) {
-      println("bucket does not exist")
+      logger.info(s"bucket $bucket does not exist")
       client.makeBucket(bucket)
-      println("bucket created")
+      println(s"bucket $bucket created")
     }
   }
 

@@ -12,13 +12,15 @@ import scala.jdk.javaapi.CollectionConverters.asScala
 
 object S3Support extends StrictLogging {
 
+  val s3Region = Regions.US_EAST_1.name
+
   val createClient: MinioAccessConfig => AmazonS3 = (minioConfig) => {
     val credentials = new BasicAWSCredentials(minioConfig.accessKey, minioConfig.secretKey)
     val clientConfiguration = new ClientConfiguration
     clientConfiguration.setSignerOverride("AWSS3V4SignerType")
 
     AmazonS3ClientBuilder.standard
-      .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(minioConfig.url, Regions.US_EAST_1.name))
+      .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(minioConfig.url, s3Region))
       .withPathStyleAccessEnabled(true)
       .withClientConfiguration(clientConfiguration)
       .withCredentials(new AWSStaticCredentialsProvider(credentials))
@@ -28,9 +30,9 @@ object S3Support extends StrictLogging {
   val createBucketIfNotExists: (AmazonS3, String) => Unit = (s3Client, bucket) => {
     val bucketExist = s3Client.doesBucketExist(bucket)
     if (!bucketExist) {
-      logger.debug("bucket does not exist")
+      logger.debug(s"bucket $bucket does not exist")
       val created: Bucket = s3Client.createBucket(bucket)
-      logger.info(s"bucket created: ${created.toString}")
+      logger.info(s"bucket $bucket created: ${created.toString}")
     } else {
       logger.info(s"bucket $bucket already exists")
     }

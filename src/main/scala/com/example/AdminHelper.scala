@@ -1,5 +1,6 @@
 package com.example
 
+import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.admin.{AdminClient, NewTopic}
 
 import scala.concurrent.Await
@@ -8,17 +9,17 @@ import scala.jdk.javaapi.CollectionConverters.asJava
 import scala.util.Try
 
 
-case object AdminHelper extends FutureConverter {
+case object AdminHelper extends FutureConverter with StrictLogging {
 
   // TODO - eliminate waiting by catching the exceptions on retry
   val truncateTopic = (adminClient: AdminClient, topic: String, partitions: Int) => {
 
     val javaTopicSet = asJava(Set(topic))
-    println(s"deleting topic $topic")
+    logger.info(s"deleting topic $topic")
     val deleted: Try[Void] = Try { Await.result(toScalaFuture(adminClient.deleteTopics(javaTopicSet).all()), 10.seconds) }
     waitForTopicToBeDeleted(adminClient, topic)
     Thread.sleep(2000)
-    println(s"creaing topic $topic")
+    logger.info(s"creating topic $topic")
     val created: Try[Void] = Try { Await.result(toScalaFuture(adminClient.createTopics(asJava(Set(new NewTopic(topic, partitions, 1)))).all()), 10.seconds) }
     waitForTopicToExist(adminClient, topic)
     Thread.sleep(2000)
@@ -29,7 +30,7 @@ case object AdminHelper extends FutureConverter {
     while (!topicExists) {
       Thread.sleep(100)
       topicExists = doesTopicExist(adminClient, topic)
-      println(s"topic $topic still does not exist")
+      if(!topicExists) logger.info(s"topic $topic still does not exist")
     }
   }
 
@@ -38,7 +39,7 @@ case object AdminHelper extends FutureConverter {
     while (topicExists) {
       Thread.sleep(100)
       topicExists = doesTopicExist(adminClient, topic)
-      println(s"topic $topic still exists")
+      if(topicExists) logger.info(s"topic $topic still exists")
     }
   }
 

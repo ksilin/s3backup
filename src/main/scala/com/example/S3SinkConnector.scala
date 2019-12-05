@@ -1,10 +1,6 @@
 package com.example
 
-import com.typesafe.scalalogging.StrictLogging
-import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
 import sttp.model.Uri
-import io.circe._
-import io.circe.generic.auto._
 
 case class S3SinkConnector(name: String, configMap: Map[String, String], connectUri: Uri, storeUrl: String, maxTasks: Int) extends S3Connector(name, configMap, connectUri, storeUrl, maxTasks) {
 

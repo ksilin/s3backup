@@ -63,20 +63,9 @@ class S3SinkConnectorTest extends FreeSpec
     AdminHelper.truncateTopic(adminClient, "_connect-configs", 25)
     AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
     AdminHelper.truncateTopic(adminClient, testTopicName, 1)
-    // AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) <- TODO - hangs
+    // AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) <- TODO - endless loop
 
-    // create topic if not exists
-    val getTopicNames: Future[util.Set[String]] = toScalaFuture(adminClient.listTopics().names())
-    val createTopicIfNotExists = getTopicNames flatMap { topicNames: util.Set[String] =>
-      val newTopics: Set[NewTopic] = (Set(testTopicName) -- asScala(topicNames)) map {
-        new NewTopic(_, 1, 1)
-      }
-      val createTopicResults: mutable.Map[String, KafkaFuture[Void]] = asScala(adminClient.createTopics(asJava(newTopics)).values())
-      Future.sequence(createTopicResults.values.map(f => toScalaFuture(f)))
-    }
-    Await.result(createTopicIfNotExists, 10.seconds)
-
-    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceRecords(100)
+    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceAvroRecords(100)
 
     createBucketIfNotExists(s3Client, bucketName)
     deleteAllObjectsInBucket(s3Client, bucketName)
