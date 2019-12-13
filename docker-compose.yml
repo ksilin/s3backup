@@ -63,6 +63,8 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper1:2181
+      # no compatibility makes testing easier, do not use in prod
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: none
 
   connect1:
     image: confluentinc/cp-kafka-connect:5.3.1
