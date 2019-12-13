@@ -45,12 +45,11 @@ case object S3SourceConnector {
       "confluent.topic.replication.factor" -> "1",
 
       // reroute records
-      "transforms"  -> "routeRecords",
+      "transforms"  -> "routeRecords,createKey",
       "transforms.routeRecords.type" ->  "org.apache.kafka.connect.transforms.RegexRouter",
       "transforms.routeRecords.regex" -> "(.*)",
-      "transforms.routeRecords.replacement" -> "$1-test",
+      "transforms.routeRecords.replacement" -> "$1-restore",
 
-      "transforms" -> "createKey",
       "transforms.createKey.type" -> "org.apache.kafka.connect.transforms.ValueToKey",
       "transforms.createKey.fields"-> "key",
 
