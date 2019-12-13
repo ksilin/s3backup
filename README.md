@@ -128,7 +128,7 @@ Why would you want to rotate the files at all?
 * exactly once 
 * parallelization & sequentiality
 * repartitioning 
-* retention & timestamps
+* retention & timestamps - timestamp.extractor is currently set to Record
 * compacted topics
 
 ## caveat

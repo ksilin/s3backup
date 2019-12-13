@@ -89,7 +89,7 @@ class BackupRestoreTest extends FreeSpec
     // TODO - does not seem to influence the last file the Source connector read
     AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
     AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
-    AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50)
+    // AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) <- TODO - endless loop
 
     // delete connectors
     sinkConnector.deleteConnector.runSyncUnsafe()

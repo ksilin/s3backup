@@ -46,6 +46,7 @@ class S3SinkConnectorTest extends FreeSpec
   val testTopicName = "s3TestTopicAvroExt"
 
   val bucketName = "connectortestbucket"
+  val bucketNameAuxTopics = "auxbucket"
 
   val adminProps = new Properties()
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
@@ -69,6 +70,8 @@ class S3SinkConnectorTest extends FreeSpec
 
     createBucketIfNotExists(s3Client, bucketName)
     deleteAllObjectsInBucket(s3Client, bucketName)
+    createBucketIfNotExists(s3Client, bucketNameAuxTopics)
+    deleteAllObjectsInBucket(s3Client, bucketNameAuxTopics)
   }
 
 
@@ -154,7 +157,7 @@ class S3SinkConnectorTest extends FreeSpec
     )
 
     val connectorName = "s3SinkConnectorAux"
-    val connector = S3SinkConnector(name = connectorName, topics = topics.mkString(","), bucket = bucketName, connectUri, configOverride = formatOverride ++ failureHandlingOverride ++ tombstoneHandlerConfig)
+    val connector = S3SinkConnector(name = connectorName, topics = topics.mkString(","), bucket = bucketNameAuxTopics, connectUri, configOverride = formatOverride ++ failureHandlingOverride ++ tombstoneHandlerConfig)
 
     "create sink connector for schemas and consumer offsets" in {
       val create = connector.createConnector
