@@ -32,7 +32,7 @@ case object S3SinkConnector {
 
       // JsonConverter with schemas.enable requires "schema" and "payload" fields and may not contain additional fields
       // "value.converter.schemas.enable" -> "false",
-      // "schemas.enable" -> "true", // isnt it the default already?
+      // "schemas.enable" -> "true", // isn't it the default already?
       // s3.compression.type -> gzip
 
       // file rotation

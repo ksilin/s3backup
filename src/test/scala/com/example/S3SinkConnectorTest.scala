@@ -1,7 +1,6 @@
 package com.example
 
 import java.nio.ByteBuffer
-import java.util
 import java.util.Properties
 
 import com.example.S3Support.{createBucketIfNotExists, createClient, deleteAllObjectsInBucket}
@@ -38,35 +37,35 @@ class S3SinkConnectorTest extends FreeSpec
 
   implicit val sttpBackend: SttpBackend[Task, Observable[ByteBuffer], WebSocketHandler] = AsyncHttpClientMonixBackend().runSyncUnsafe()
 
-  val connectUri: Uri = uri"http://localhost:8083"
-  val bootstrapServers = "localhost:9091"
+  private val connectUri: Uri = uri"http://localhost:8083"
+  private val bootstrapServers = "localhost:9091"
   private val schemaRegistryUri = "http://localhost:8081"
 
   //val testTopicName = "s3TestTopicBytes"
-  val testTopicName = "s3TestTopicAvroExt"
+  private val testTopicName = "s3TestTopicAvroExt"
 
-  val bucketName = "connectortestbucket"
-  val bucketNameAuxTopics = "auxbucket"
+  private val bucketName = "connectortestbucket"
+  private val bucketNameAuxTopics = "auxbucket"
 
-  val adminProps = new Properties()
+  private val adminProps = new Properties()
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
-  val adminClient: AdminClient = AdminClient.create(adminProps)
+  private val adminClient: AdminClient = AdminClient.create(adminProps)
 
-  val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
-  val s3Client = createClient(minioConfig)
+  private val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+  private val s3Client = createClient(minioConfig)
 
-  val testRecords = TestRecords(testTopicName, bootstrapServers, schemaRegistryUri)
+  private val testRecords = TestRecords(bootstrapServers, schemaRegistryUri)
 
   override def beforeAll() {
 
     //truncate offsets
     AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
-    AdminHelper.truncateTopic(adminClient, "_connect-configs", 25)
+    AdminHelper.truncateTopic(adminClient, "_connect-configs", 1)
     AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
     AdminHelper.truncateTopic(adminClient, testTopicName, 1)
     // AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) <- TODO - endless loop
 
-    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceAvroRecords(100)
+    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceSimpleMessageAvroRecords(testTopicName, 100)
 
     createBucketIfNotExists(s3Client, bucketName)
     deleteAllObjectsInBucket(s3Client, bucketName)
@@ -92,16 +91,13 @@ class S3SinkConnectorTest extends FreeSpec
     val connectorName = "s3SinkConnector"
 
     val smtConfigMap = Map(
-      "transforms" -> "addOffset,addPartition,addTimestamp",
+      "transforms" -> "addOffset,addPartition", //addTimestamp
 
       "transforms.addOffset.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
       "transforms.addOffset.offset.field"-> "offset",
 
       "transforms.addPartition.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
       "transforms.addPartition.partition.field"-> "partition",
-
-      "transforms.addTimestamp.type" -> "org.apache.kafka.connect.transforms.InsertField$Value",
-      "transforms.addTimestamp.timestamp.field"-> "ts",
     )
 
     val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = smtConfigMap)
@@ -120,6 +116,7 @@ class S3SinkConnectorTest extends FreeSpec
       val create = connector.createConnector
       val res: Response[Either[String, String]] = create.runSyncUnsafe()
       println(res.body fold(e => s"failed: $e", r => s"success: $r"))
+
     }
 
     "change connector config" in {
@@ -144,25 +141,26 @@ class S3SinkConnectorTest extends FreeSpec
       "transforms.tombstoneHandler.type" -> "io.confluent.connect.transforms.TombstoneHandler",
     )
 
-    val formatOverride = Map(
+    val byteArrayFormatConfig = Map(
       "key.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
       "value.converter" -> "org.apache.kafka.connect.converters.ByteArrayConverter",
       "format.class" -> "io.confluent.connect.s3.format.bytearray.ByteArrayFormat",
     )
 
-    val failureHandlingOverride = Map(
+    val fullToleranceAndLogsErrorHandlingConfig = Map(
       "errors.tolerance"  -> "all",
       "errors.log.enable" -> "true",
       "errors.log.include.messages" -> "true",
     )
 
     val connectorName = "s3SinkConnectorAux"
-    val connector = S3SinkConnector(name = connectorName, topics = topics.mkString(","), bucket = bucketNameAuxTopics, connectUri, configOverride = formatOverride ++ failureHandlingOverride ++ tombstoneHandlerConfig)
+    val connector = S3SinkConnector(name = connectorName, topics = topics.mkString(","), bucket = bucketNameAuxTopics, connectUri, configOverride = byteArrayFormatConfig ++ fullToleranceAndLogsErrorHandlingConfig ++ tombstoneHandlerConfig)
 
     "create sink connector for schemas and consumer offsets" in {
       val create = connector.createConnector
       val res: Response[Either[String, String]] = create.runSyncUnsafe()
       println(res.body fold(e => s"failed: $e", r => s"success: $r"))
+
     }
   }
 

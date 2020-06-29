@@ -1,6 +1,7 @@
 package com.example
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
 
 import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
 import com.typesafe.scalalogging.StrictLogging
@@ -15,32 +16,50 @@ import scala.concurrent.{Await, Future}
 import concurrent.duration._
 import scala.util.Random
 
-case class TestRecords(topicName: String, bootstrapServers: String = "localhost:9091", schemaRegistryUri: String = "http://localhost:8081") extends GenericRecordAvro with StrictLogging with FutureConverter {
+case class TestRecords( bootstrapServers: String = "localhost:9091", schemaRegistryUri: String = "http://localhost:8081") extends GenericRecordAvro with StrictLogging with FutureConverter {
 
   import monix.execution.Scheduler.Implicits.global
 
   val simpleMessageSchema: Schema = AvroSchema[SimpleMessage]
   implicit val simpleMessageFormat: RecordFormat[SimpleMessage] = RecordFormat(simpleMessageSchema)
+  val userMessageSchema: Schema = AvroSchema[UserMessage]
+  implicit val userMessageFormat: RecordFormat[UserMessage] = RecordFormat(userMessageSchema)
   //val fmt: RecordFormat[SimpleMessage] = implicitly[RecordFormat[SimpleMessage]]
+
   val srClient         = new CachedSchemaRegistryClient(schemaRegistryUri, 50)
-
   val avroSerde: GenericAvroSerde = new GenericAvroSerde(srClient)
-  srClient.register(s"$topicName-value", simpleMessageSchema)
 
-  // val records: List[ProducerRecord[String, String]] = (1 to 100).toList map { i =>
-  // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8)).asJson.noSpaces
-  // new ProducerRecord[String, String](testTopicName, 0, i.toString, msg)//s"$i + ${Random.alphanumeric.take(10).mkString}")
-  // }
 
-  val makeAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => (1 to count).toList map { i =>
-    val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))
-    // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))//.asJson.noSpaces
-    new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))//s"$i + ${Random.alphanumeric.take(10).mkString}")
+  val makeSimpleMessageAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => {
+    (1 to count).toList map { i =>
+      val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))
+      // val msg = SimpleMessage(i.toString, s"$i + ${Random.alphanumeric.take(10).mkString}".getBytes(StandardCharsets.UTF_8))//.asJson.noSpaces
+      new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))//s"$i + ${Random.alphanumeric.take(10).mkString}")
+    }
   }
 
+  val makeUserMessageAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => {
+    (1 to count).toList map { i =>
+      // userId: Int, username: String, data: String, createdAt: LocalDateTime
+      val msg = UserMessage(userId = i, username = s"$i + ${Random.alphanumeric.take(5).mkString}",  data =  s"$i + ${Random.alphanumeric.take(10).mkString}", createdAt = LocalDateTime.now)
+      new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))
+    }
+  }
 
-  val produceAvroRecords: (Int) => List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = (count) => {
-    val records = makeAvroRecords(topicName, count)
+  val produceSimpleMessageAvroRecords: (String, Int) => List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = (topicName, count) => {
+    // is this required? Is the schema used?
+    srClient.register(s"$topicName-value", simpleMessageSchema)
+    val records = makeSimpleMessageAvroRecords(topicName, count)
+    val x: Future[List[(ProducerRecord[String, GenericRecord], RecordMetadata)]] = Future.traverse(records) {
+      r =>
+        toScalaFuture(producer.send(r, loggingProducerCallback)).map((r -> _))
+    }
+    Await.result(x, 10.seconds)
+  }
+
+  val produceAvroRecords: List[ProducerRecord[String, GenericRecord]] => List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = (records) => {
+    // is this required? Is the schema used?
+    // srClient.register(s"$topicName-value", simpleMessageSchema)
     val x: Future[List[(ProducerRecord[String, GenericRecord], RecordMetadata)]] = Future.traverse(records) {
       r =>
         toScalaFuture(producer.send(r, loggingProducerCallback)).map((r -> _))

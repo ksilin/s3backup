@@ -1,7 +1,7 @@
 package com.example
 
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.kafka.clients.admin.{AdminClient, NewTopic}
+import org.apache.kafka.clients.admin.{AdminClient, CreateTopicsResult, NewTopic}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -20,7 +20,10 @@ case object AdminHelper extends FutureConverter with StrictLogging {
     waitForTopicToBeDeleted(adminClient, topic)
     Thread.sleep(2000)
     logger.info(s"creating topic $topic")
-    val created: Try[Void] = Try { Await.result(toScalaFuture(adminClient.createTopics(asJava(Set(new NewTopic(topic, partitions, 1)))).all()), 10.seconds) }
+    val created: Try[Void] = Try {
+      val newTopic = new NewTopic(topic, partitions, Short.box(1)) // need to box the short here to prevent ctor ambiguity
+      val createTopicsResult: CreateTopicsResult = adminClient.createTopics(asJava(Set(newTopic)))
+      Await.result(toScalaFuture(createTopicsResult.all()), 10.seconds) }
     waitForTopicToExist(adminClient, topic)
     Thread.sleep(2000)
   }

@@ -1,6 +1,6 @@
 package com.example
 
-import com.amazonaws.services.s3.model.{DeleteObjectsRequest, ListObjectsV2Result, ObjectListing, S3ObjectSummary}
+import com.amazonaws.services.s3.model.{ ListObjectsV2Result, ObjectListing, S3ObjectSummary}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.clients.producer._
@@ -45,7 +45,7 @@ class BackupRestoreTest extends FreeSpec
   val consumerRestored = makeConsumer
   val pollDuration = java.time.Duration.ofMillis(100)
 
-  val testRecords = TestRecords(topicName, bootstrapServers, schemaRegistryUri)
+  val testRecords = TestRecords(bootstrapServers, schemaRegistryUri)
 
   val adminProps = new Properties()
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
@@ -76,7 +76,7 @@ class BackupRestoreTest extends FreeSpec
     sinkConnector.deleteConnector.runSyncUnsafe()
     sourceConnector.deleteConnector.runSyncUnsafe()
 
-    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceAvroRecords(100)
+    val createdRecords: List[(ProducerRecord[String, GenericRecord], RecordMetadata)] = testRecords.produceSimpleMessageAvroRecords(topicName, 100)
 
     createBucketIfNotExists(s3Client, bucketName)
     deleteAllObjectsInBucket(s3Client, bucketName)

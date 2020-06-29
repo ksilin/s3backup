@@ -12,9 +12,9 @@ enablePlugins(DockerPlugin)
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 resolvers += "confluent" at "https://packages.confluent.io/maven/"
 
-libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.3.1"
-libraryDependencies += "io.confluent" % "kafka-streams-avro-serde" % "5.3.1"
-libraryDependencies += "io.confluent" % "kafka-avro-serializer" % "5.3.1"
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.5.0"
+libraryDependencies += "io.confluent" % "kafka-streams-avro-serde" % "5.5.1"
+libraryDependencies += "io.confluent" % "kafka-avro-serializer" % "5.5.1"
 
 libraryDependencies += "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4"
 

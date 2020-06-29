@@ -4,7 +4,7 @@ import java.util.Properties
 
 import com.example.S3Support.{createBucketIfNotExists, createClient}
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
+import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import sttp.client.asynchttpclient.monix.AsyncHttpClientMonixBackend
@@ -22,27 +22,28 @@ class S3SourceConnectorTest extends FreeSpec
 
   implicit val sttpBackend = AsyncHttpClientMonixBackend().runSyncUnsafe()
 
-  val connectUri: Uri = uri"http://localhost:8083"
-  val bootstrapServers = "localhost:9091"
-  val testTopicName = "s3TestTopicAvro"
-  val connectorName = "s3SourceConnector"
-  val bucketName = "connectortestbucket"
+  private val connectUri: Uri = uri"http://localhost:8083"
+  private val bootstrapServers = "localhost:9091"
+  private val testTopicName = "s3TestTopicAvroExt-restore" // adding test suffix from SMT config
+  private val connectorName = "s3SourceConnector5"
+  private val bucketName = "connectortestbucket"
 
-  val connector: S3SourceConnector = S3SourceConnector(name = connectorName, bucket = bucketName, connectUri)
+  private val connector: S3SourceConnector = S3SourceConnector(name = connectorName, bucket = bucketName, connectUri)
 
-  val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
-  val s3Client = createClient(minioConfig)
+  private val minioConfig = MinioAccessConfig( url = "http://localhost:9001", accessKey = "AKIAIOSFODNN7EXAMPLE", secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+  private val s3Client = createClient(minioConfig)
 
-  val adminProps = new Properties()
+  private val adminProps = new Properties()
   adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
-  val adminClient: AdminClient = AdminClient.create(adminProps)
+  private val adminClient: AdminClient = AdminClient.create(adminProps)
 
   override def beforeAll() {
     AdminHelper.truncateTopic(adminClient, "_connect-offsets", 25)
     AdminHelper.truncateTopic(adminClient, "_connect-status", 25)
-    AdminHelper.truncateTopic(adminClient, "_connect-configs", 25)
+    AdminHelper.truncateTopic(adminClient, "_connect-configs", 1)
     AdminHelper.truncateTopic(adminClient, testTopicName, 1)
     //AdminHelper.truncateTopic(adminClient, "__consumer_offsets", 50) // TODO - consumer offsets cannot be recreated?
+
     createBucketIfNotExists(s3Client, bucketName)
   }
 

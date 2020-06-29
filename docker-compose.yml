@@ -2,7 +2,7 @@
 version: "3"
 services:
   zookeeper1:
-    image: confluentinc/cp-zookeeper:5.3.1
+    image: confluentinc/cp-zookeeper:5.5.1
     hostname: zookeeper1
     environment:
       ZOOKEEPER_SERVER_ID: 1
@@ -15,7 +15,7 @@ services:
       - 2181:2181
 
   kafka1:
-    image: confluentinc/cp-kafka:5.3.1
+    image: confluentinc/cp-kafka:5.5.1
     hostname: kafka1
     depends_on:
       - zookeeper1
@@ -54,7 +54,7 @@ services:
       retries: 3
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:5.3.1
+    image: confluentinc/cp-schema-registry:5.5.1
     ports:
       - "8081:8081"
     depends_on:
@@ -67,7 +67,7 @@ services:
       SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: none
 
   connect1:
-    image: confluentinc/cp-kafka-connect:5.3.1
+    image: confluentinc/cp-kafka-connect:5.5.1
     depends_on:
       - zookeeper1
       - kafka1
@@ -81,15 +81,18 @@ services:
       CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
       CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
       CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      # enable connectors to name their consumer groups
+      CONNECT_CONNECTOR_CLIENT_CONFIG_OVERRIDE_POLICY: "All"
       CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
       CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      # internal connector configs have been deprecated
+      # CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      # CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "connect1"
       CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
-      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR,io.confluent.connect=TRACE"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=INFO,org.reflections=ERROR,io.confluent.connect=TRACE"
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
@@ -102,10 +105,10 @@ services:
       - -c
       - |
         echo "Installing Connector"
-        confluent-hub install confluentinc/kafka-connect-s3:5.3.1 --no-prompt
+        confluent-hub install confluentinc/kafka-connect-s3:5.5.1 --no-prompt
         # needed for tombstone handling
         confluent-hub install confluentinc/connect-transforms:latest --no-prompt
-        confluent-hub install confluentinc/kafka-connect-s3-source:1.1.1-preview --no-prompt
+        confluent-hub install confluentinc/kafka-connect-s3-source:1.3.1 --no-prompt
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
