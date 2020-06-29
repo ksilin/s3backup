@@ -83,24 +83,27 @@ class S3SinkConnectorParquetTest extends FreeSpec
 
   "parquet generation" - {
 
-    val parquetConfig = Map(
+    val defaultParquetConfig = Map(
       "flush.size" -> "100",
       "rotate.schedule.interval.ms" -> "20000",
       "auto.register.schemas" -> "false", // TODO - try this as well
       "tasks.max" -> "1",
       "s3.part.size" -> "5242880",
-      // "timezone" -> "UTC",
       "parquet.codec" -> "snappy",
       "format.class" -> "io.confluent.connect.s3.format.parquet.ParquetFormat",
       "value.converter" -> "io.confluent.connect.avro.AvroConverter",
       "key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
-     // "partitioner.class" -> "io.confluent.connect.storage.partitioner.FieldPartitioner",
-      // "partition.field.name" -> "key"
     )
 
-    val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = parquetConfig)
+    val nameBasedPartitioning = Map(
+      "partitioner.class" -> "io.confluent.connect.storage.partitioner.FieldPartitioner",
+      "partition.field.name" -> "userName"
+    )
+
+    val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = defaultParquetConfig ++ nameBasedPartitioning)
 
     "create sink connector for writing parquet files" in {
+      val deleted = connector.deleteConnector.runSyncUnsafe()
       val create = connector.createConnector
       val res: Response[Either[String, String]] = create.runSyncUnsafe()
       println("connector creation:")

@@ -1,7 +1,7 @@
 package com.example
 
 import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 
 import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
 import com.typesafe.scalalogging.StrictLogging
@@ -21,6 +21,7 @@ case class TestRecords( bootstrapServers: String = "localhost:9091", schemaRegis
   import monix.execution.Scheduler.Implicits.global
 
   val simpleMessageSchema: Schema = AvroSchema[SimpleMessage]
+
   implicit val simpleMessageFormat: RecordFormat[SimpleMessage] = RecordFormat(simpleMessageSchema)
   val userMessageSchema: Schema = AvroSchema[UserMessage]
   implicit val userMessageFormat: RecordFormat[UserMessage] = RecordFormat(userMessageSchema)
@@ -38,10 +39,12 @@ case class TestRecords( bootstrapServers: String = "localhost:9091", schemaRegis
     }
   }
 
+  val userNames = Set("Erica", "Mavis", "Sita", "Amun", "Akatsuki", "Victoria", "Caelan").toList
+
   val makeUserMessageAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => {
     (1 to count).toList map { i =>
       // userId: Int, username: String, data: String, createdAt: LocalDateTime
-      val msg = UserMessage(userId = i, username = s"$i + ${Random.alphanumeric.take(5).mkString}",  data =  s"$i + ${Random.alphanumeric.take(10).mkString}", createdAt = LocalDateTime.now)
+      val msg = UserMessage(userId = i, userName = userNames(Random.between(0,userNames.length)),  data =  s"$i + ${Random.alphanumeric.take(10).mkString}", createdAt = LocalDateTime.now)
       new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))
     }
   }
@@ -92,7 +95,7 @@ case class TestRecords( bootstrapServers: String = "localhost:9091", schemaRegis
     override def onCompletion(meta: RecordMetadata, e: Exception): Unit =
       if (e == null)
         logger.info(
-          s"published to kafka: ${meta.topic()} : ${meta.partition()} : ${meta.offset()} : ${meta.timestamp()} "
+          s"published to kafka: ${meta.topic()}:${meta.partition()}:${meta.offset()} at ${Instant.ofEpochMilli(meta.timestamp())} "
         )
       else logger.error(s"failed to publish to kafka: $e")
   }
