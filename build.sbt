@@ -7,14 +7,19 @@ lazy val root = (project in file(".")).
     name := "s3backup"
   )
 enablePlugins(DockerComposePlugin)
-enablePlugins(DockerPlugin)
+enablePlugins(JavaAppPackaging)
+
+scalacOptions += "-target:jvm-1.8"
+javacOptions ++= Seq("-source", "1.8")
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 resolvers += "confluent" at "https://packages.confluent.io/maven/"
 
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.5.0"
+libraryDependencies += "org.apache.kafka" % "connect-api" % "2.5.0"
 libraryDependencies += "io.confluent" % "kafka-streams-avro-serde" % "5.5.1"
 libraryDependencies += "io.confluent" % "kafka-avro-serializer" % "5.5.1"
+libraryDependencies += "io.confluent" % "kafka-connect-storage-partitioner" % "5.5.1"
 
 libraryDependencies += "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.9"
 
@@ -42,3 +47,5 @@ libraryDependencies += "io.circe" %% "circe-generic" % "0.13.0"
 // libraryDependencies += "com.ovoenergy" %% "kafka-serialization-circe" % "0.5.17"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
+
+

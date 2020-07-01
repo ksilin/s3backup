@@ -44,7 +44,7 @@ case class TestRecords( bootstrapServers: String = "localhost:9091", schemaRegis
   val makeUserMessageAvroRecords: (String, Int) =>  List[ProducerRecord[String, GenericRecord]] = (topicName, count) => {
     (1 to count).toList map { i =>
       // userId: Int, username: String, data: String, createdAt: LocalDateTime
-      val msg = UserMessage(userId = i, userName = userNames(Random.between(0,userNames.length)),  data =  s"$i + ${Random.alphanumeric.take(10).mkString}", createdAt = LocalDateTime.now)
+      val msg = UserMessage(userId = i, userName = userNames(Random.between(0,userNames.length)),  age = i, data =  s"$i + ${Random.alphanumeric.take(10).mkString}", createdAt = LocalDateTime.now)
       new ProducerRecord[String, GenericRecord](topicName, 0, i.toString, toAvro(msg))
     }
   }

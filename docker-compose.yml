@@ -113,7 +113,10 @@ services:
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
         #
+        cp /etc/kafka/s3backup_2.13-0.1.0-SNAPSHOT.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-s3/lib
         sleep infinity      
+    volumes:
+      - ./target/scala-2.13:/etc/kafka
 
 volumes:
   minio1-data:

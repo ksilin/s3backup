@@ -93,6 +93,8 @@ class S3SinkConnectorParquetTest extends FreeSpec
       "format.class" -> "io.confluent.connect.s3.format.parquet.ParquetFormat",
       "value.converter" -> "io.confluent.connect.avro.AvroConverter",
       "key.converter" -> "org.apache.kafka.connect.storage.StringConverter",
+      "partitioner.class" -> "com.example.EvenOddPartitioner",
+      "partition.field.name" -> "age"
     )
 
     val nameBasedPartitioning = Map(
@@ -100,7 +102,12 @@ class S3SinkConnectorParquetTest extends FreeSpec
       "partition.field.name" -> "userName"
     )
 
-    val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = defaultParquetConfig ++ nameBasedPartitioning)
+    val evenOddPartitioning = Map(
+      "partitioner.class" -> "com.example.EvenOddPartitioner",
+      "partition.field.name" -> "age"
+    )
+
+    val connector = S3SinkConnector(name = connectorName, topics = testTopicName, bucket = bucketName, connectUri, configOverride = defaultParquetConfig ++ evenOddPartitioning) // ++  nameBasedPartitioning)
 
     "create sink connector for writing parquet files" in {
       val deleted = connector.deleteConnector.runSyncUnsafe()
